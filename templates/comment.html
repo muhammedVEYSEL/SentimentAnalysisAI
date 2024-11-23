@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video_title }} Yorumları</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>{{ video_title }}</h2>
+        <p>Video ID: {{ video_id }}</p>
+
+        <h4>Yorumlar:</h4>
+        <ul class="list-group" id="comments-list">
+            {% for comment in comments %}
+                <li class="list-group-item">
+                    <strong>{{ comment.author }}</strong> - {{ comment.like_count }} beğeni<br>
+                    <p>{{ comment.comment }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Analiz Et Butonu -->
+        <button id="analyzeBtn" class="btn btn-primary mt-3">Yorumları Analiz Et</button>
+        <a href="{% url 'video_search' %}?video_name={{ video_id }}" class="btn btn-secondary mt-3">Geri Dön</a>
+    </div>
+
+    <script>
+        document.getElementById('analyzeBtn').addEventListener('click', function () {
+            // Yorumları toplama
+            const comments = Array.from(document.querySelectorAll('#comments-list .list-group-item')).map(item => {
+                return {
+                    author: item.querySelector('strong').innerText,
+                    comment: item.querySelector('p').innerText
+                };
+            });
+
+            const videoTitle = "{{ video_title|escapejs }}";
+            const videoId = "{{ video_id|escapejs }}";
+
+            fetch("{% url 'video_models' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    comments: comments,
+                    video_title: videoTitle,
+                    video_id: videoId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ağ hatası oluştu');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Analiz sonuçları:', data);
+                window.location.href = `/model_results/?video_title=${encodeURIComponent(videoTitle)}&video_id=${encodeURIComponent(videoId)}&predictions=${encodeURIComponent(JSON.stringify(data.predictions))}`;
+            })
+            .catch(error => {
+                console.error('Hata:', error);
+            });
+        });
+    </script>
+</body>
+</html>
